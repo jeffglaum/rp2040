@@ -55,13 +55,16 @@ fn main() -> ! {
 
     // GPIO25 is connected to on-board LED
     let mut delay = cortex_m::delay::Delay::new(core.SYST, clocks.system_clock.freq().to_Hz());
-    let mut led_pin = pins.gpio25.into_push_pull_output();
+    let mut led1_pin = pins.gpio24.into_push_pull_output();
+    let mut led2_pin = pins.gpio25.into_push_pull_output();
 
     loop {
-        led_pin.set_high().unwrap();
+        led1_pin.set_high().unwrap();
+        led2_pin.set_low().unwrap();
         delay.delay_ms(500);
 
-        led_pin.set_low().unwrap();
+        led1_pin.set_low().unwrap();
+        led2_pin.set_high().unwrap();
         delay.delay_ms(500);
     }
 }
