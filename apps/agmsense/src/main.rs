@@ -5,8 +5,9 @@ use panic_halt as _;
 
 use fugit::RateExtU32;
 
-use embedded_hal::{digital::OutputPin, i2c::I2c};
+use embedded_hal::digital::OutputPin;
 use hal::{pac, watchdog::Watchdog, Sio};
+use mpu9250;
 use rp2040_hal::{self as hal, Clock};
 
 use rtt_target::{rprintln, rtt_init_print};
@@ -62,7 +63,7 @@ fn main() -> ! {
 
     // Initialize i2c interface
     rprintln!("INFO: Initializing I2C interface...");
-    let mut i2c = hal::I2C::i2c1(
+    let i2c = hal::I2C::i2c1(
         pac.I2C1,
         pins.gpio18.reconfigure(), // sda
         pins.gpio19.reconfigure(), // scl
@@ -72,16 +73,15 @@ fn main() -> ! {
     );
 
     // Invensense MPU9250A AGM is connected SDA=GPIO18, SCL=GPIO19 and I2C address is 0x68
-    const MPU9250A_I2C_ADDRESS: u8 = 0x68;
-    const MPU9250A_WHOAMI_REG: u8 = 0x75;
-    let writebuf: [u8; 1] = [MPU9250A_WHOAMI_REG; 1];
-    let mut readbuf: [u8; 1] = [0; 1];
+    let mut mpu9250 = mpu9250::Mpu9250::marg_default(i2c, &mut delay).unwrap();
+    let who_am_i = mpu9250.who_am_i().unwrap();
+    let ak8963_who_am_i = mpu9250.ak8963_who_am_i().unwrap();
 
-    let result = i2c.write_read(MPU9250A_I2C_ADDRESS, &writebuf, &mut readbuf);
-    if let Ok(_d) = result {
-        // Expect WHO_AM_I to be 0x71
-        rprintln!("INFO: MPU-9250A WHO_AM_I value={:#02x}", readbuf[0]);
-    }
+    rprintln!("WHO_AM_I: 0x{:x}", who_am_i);
+    rprintln!("AK8963_WHO_AM_I: 0x{:x}", ak8963_who_am_i);
+
+    assert_eq!(who_am_i, 0x71);
+    assert_eq!(ak8963_who_am_i, 0x48);
 
     loop {
         led1_pin.set_high().unwrap();
